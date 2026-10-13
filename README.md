@@ -1,5 +1,7 @@
 # Customers Like You
 
+**GitHub:** https://github.com/omargomaa27/customers-like-you
+
 Mini-project for customer recommendation and segmentation using the UCI Online Retail II dataset.
 
 The goal is to compress a large customer-product purchase matrix, generate product recommendations, compare PCA and Truncated SVD, and identify meaningful customer segments for marketing.
@@ -33,29 +35,51 @@ The `data/` folder is excluded from Git.
 
 ## How to Run
 
-1. Install dependencies:
+1. Clone the repository and enter the project folder:
+
+   ```bash
+   git clone https://github.com/omargomaa27/customers-like-you.git
+   cd customers-like-you
+   ```
+
+2. Install dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-2. Download `online_retail_II.xlsx` from the
-   [UCI repository](https://archive.ics.uci.edu/dataset/502/online+retail+ii)
-   and place it at `data/raw/online_retail_II.xlsx`.
+3. Download `online_retail_II.xlsx` from the [UCI repository](https://archive.ics.uci.edu/dataset/502/online+retail+ii) and place it at:
 
-3. Run the notebooks in order. Each one writes the files the next one reads, so the
-   order matters:
+   `data/raw/online_retail_II.xlsx`
 
-   | Notebook | Produces |
+4. Rebuild the cleaned data, train/test split, and sparse customer-product matrix with:
+
+   ```bash
+   python build_matrix.py
+   ```
+
+   This regenerates:
+
+   - `data/processed/cleaned_retail.csv`
+   - `data/processed/train.csv`
+   - `data/processed/test_new.csv`
+   - `data/processed/customer_product_matrix.npz`
+   - `data/processed/customer_map.csv`
+   - `data/processed/product_map.csv`
+
+5. Run the notebooks in order for the full analysis:
+
+   | Notebook | Purpose |
    |---|---|
-   | `01_data_profile.ipynb` | Data profile (reads raw data only) |
-   | `02_data_cleaning.ipynb` | `data/processed/cleaned_retail.csv` |
-   | `03_train_test_matrix.ipynb` | `train.csv`, `test_new.csv`, the sparse matrix |
-   | `04_svd_model.ipynb` | SVD model, recommendations, PCA vs SVD comparison |
-   | `05_customer_segments.ipynb` | `figures/customer_segments.png` |
+   | `01_data_profile.ipynb` | Profile the raw dataset |
+   | `02_data_cleaning.ipynb` | Document and inspect the cleaning process |
+   | `03_train_test_matrix.ipynb` | Document the split and sparse matrix construction |
+   | `04_svd_model.ipynb` | Train/evaluate SVD, PCA, recommendations, and baseline |
+   | `05_customer_segments.ipynb` | Create customer segments and save the segment map |
 
-   Run each from a clean kernel, top to bottom. All random seeds are fixed at
-   `random_state=42`.
+   Run each notebook from a clean kernel, top to bottom. All random seeds are fixed at `random_state=42`.
+
+`build_matrix.py` is the reproducible one-command path for rebuilding the cleaned dataset and customer-product matrix from the raw Excel file. The notebooks provide the full analysis, explanations, model evaluation, and visualizations.
 
 ## Data Cleaning
 
@@ -70,11 +94,7 @@ The `data/` folder is excluded from Git.
 
 After cleaning, 802,558 transaction rows remained.
 
-Non-product codes cover postage, carriage, discounts, adjustments, bank charges and test
-transactions: `POST`, `M`, `D`, `BANK CHARGES`, `C2`, `DOT`, `ADJUST`, `ADJUST2`,
-`TEST001`, `TEST002`, `23444` (Next Day Carriage) and `23574` (PACKING CHARGE). The last
-two use ordinary five-digit codes and are identifiable only from their descriptions.
-`PADS` and `SP1002` were kept because their descriptions identify genuine products.
+Non-product codes cover postage, carriage, discounts, adjustments, bank charges and test transactions: `POST`, `M`, `D`, `BANK CHARGES`, `C2`, `DOT`, `ADJUST`, `ADJUST2`, `TEST001`, `TEST002`, `23444` (Next Day Carriage) and `23574` (PACKING CHARGE). The last two use ordinary five-digit codes and are identifiable only from their descriptions. `PADS` and `SP1002` were kept because their descriptions identify genuine products.
 
 ## Train/Test Split
 
@@ -106,11 +126,11 @@ The following values of k were tested:
 
 | k | Fit time | Relative reconstruction error |
 |---:|---:|---:|
-| 10 | 0.17 s | 0.7562 |
-| 20 | 0.21 s | 0.6875 |
-| 50 | 0.54 s | 0.5845 |
-| 100 | 1.24 s | 0.4961 |
-| 200 | 2.08 s | 0.3993 |
+| 10 | 0.12 s | 0.7562 |
+| 20 | 0.22 s | 0.6875 |
+| 50 | 0.57 s | 0.5845 |
+| 100 | 1.13 s | 0.4961 |
+| 200 | 2.39 s | 0.3993 |
 
 A final value of **k = 100** was selected as a balance between reconstruction quality, runtime, and model size.
 
@@ -122,11 +142,9 @@ Evaluation was performed using Hit Rate@10 on held-out purchases.
 
 - SVD Hit Rate@10: 20.60%
 - Best-seller baseline Hit Rate@10: 17.28%
-- Nightly recommendation runtime: 1.40 seconds for 1,927 customers
+- Nightly recommendation runtime: 1.56 seconds for 1,927 customers
 
-The baseline recommends each customer the 10 best sellers they have not already
-bought, and is measured over the same 1,927 customers the model can score, so the
-two figures are directly comparable.
+The baseline recommends each customer the 10 best sellers they have not already bought, and is measured over the same 1,927 customers the model can score, so the two figures are directly comparable.
 
 The SVD recommender outperformed the best-seller baseline by 3.3 percentage points.
 
@@ -136,15 +154,14 @@ Both methods were evaluated using k = 100.
 
 | Measure | PCA | Truncated SVD |
 |---|---:|---:|
-| Fit time | 0.44 s | 1.16 s |
+| Fit time | 0.48 s | 1.01 s |
 | Peak memory during fit | 17.92 MB | 17.70 MB |
 | Stored factors | 7.63 MB | 7.63 MB |
 | Explained variance / reconstruction error | 74.81% explained variance | 0.4961 relative error |
 | Hit Rate@10 | 20.13% | 20.60% |
 | Best-seller baseline | 17.28% | 17.28% |
 
-Fit time and peak memory are measured on the same profiled fit, so the two rows describe
-one run. Timings vary slightly between runs.
+Fit time and peak memory are measured on the same profiled fit, so the two rows describe one run. Timings vary slightly between runs.
 
 Both methods produced similar recommendation accuracy. Truncated SVD was preferred because it works naturally with sparse customer-product data.
 
@@ -152,8 +169,7 @@ Both methods produced similar recommendation accuracy. Truncated SVD was preferr
 
 Customers were clustered using normalized SVD customer representations.
 
-Cluster numbers from KMeans are arbitrary and can permute between runs, so each segment is
-named from the highest-volume product in that cluster rather than from its cluster number.
+Cluster numbers from KMeans are arbitrary and can permute between runs, so each segment is named from the highest-volume product in that cluster rather than from its cluster number.
 
 | Cluster | Top product | Segment name | Customers |
 |---:|---|---|---:|
@@ -170,6 +186,7 @@ The segment map is saved to `figures/customer_segments.png` and contains no cust
 
 ```text
 customers-like-you/
+├── build_matrix.py
 ├── data/
 │   ├── raw/
 │   └── processed/
