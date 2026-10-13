@@ -4,6 +4,17 @@ Mini-project for customer recommendation and segmentation using the UCI Online R
 
 The goal is to compress a large customer-product purchase matrix, generate product recommendations, compare PCA and Truncated SVD, and identify meaningful customer segments for marketing.
 
+**Individual project — I performed both the Data Engineer and ML Engineer roles.**
+
+## Success Targets
+
+The project succeeds if it can show, with numbers, that:
+
+1. The compressed representation is much smaller than the dense customer-product matrix.
+2. The nightly recommendation job is fast enough to run every night.
+3. The recommender beats a best-seller baseline on purchases the model never saw.
+4. The customer map produces groups the marketing team can name and campaign against.
+
 ## Dataset
 
 The project uses the UCI Online Retail II dataset, containing transactions from December 2009 to December 2011.
@@ -20,34 +31,58 @@ The raw dataset is stored locally in:
 
 The `data/` folder is excluded from Git.
 
-## Project Goals
+## How to Run
 
-The project evaluates whether dimensionality reduction can:
+1. Install dependencies:
 
-- Reduce the size of the customer-product representation
-- Produce recommendations faster
-- Beat a simple best-seller recommendation baseline
-- Identify meaningful customer segments for marketing
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Download `online_retail_II.xlsx` from the
+   [UCI repository](https://archive.ics.uci.edu/dataset/502/online+retail+ii)
+   and place it at `data/raw/online_retail_II.xlsx`.
+
+3. Run the notebooks in order. Each one writes the files the next one reads, so the
+   order matters:
+
+   | Notebook | Produces |
+   |---|---|
+   | `01_data_profile.ipynb` | Data profile (reads raw data only) |
+   | `02_data_cleaning.ipynb` | `data/processed/cleaned_retail.csv` |
+   | `03_train_test_matrix.ipynb` | `train.csv`, `test_new.csv`, the sparse matrix |
+   | `04_svd_model.ipynb` | SVD model, recommendations, PCA vs SVD comparison |
+   | `05_customer_segments.ipynb` | `figures/customer_segments.png` |
+
+   Run each from a clean kernel, top to bottom. All random seeds are fixed at
+   `random_state=42`.
 
 ## Data Cleaning
 
-The following rows were removed:
+| Cleaning rule | Rows removed | Rows remaining |
+|---|---:|---:|
+| Starting dataset | 0 | 1,067,371 |
+| Remove cancelled invoices | 19,494 | 1,047,877 |
+| Remove non-positive quantities | 3,457 | 1,044,420 |
+| Remove non-positive prices | 2,750 | 1,041,670 |
+| Remove missing Customer IDs | 236,121 | 805,549 |
+| Remove non-product codes | 2,991 | 802,558 |
 
-- Cancelled invoices
-- Non-positive quantities
-- Non-positive prices
-- Missing Customer IDs
-- Non-product codes
+After cleaning, 802,558 transaction rows remained.
 
-After cleaning, 802,965 transaction rows remained.
+Non-product codes cover postage, carriage, discounts, adjustments, bank charges and test
+transactions: `POST`, `M`, `D`, `BANK CHARGES`, `C2`, `DOT`, `ADJUST`, `ADJUST2`,
+`TEST001`, `TEST002`, `23444` (Next Day Carriage) and `23574` (PACKING CHARGE). The last
+two use ordinary five-digit codes and are identifiable only from their descriptions.
+`PADS` and `SP1002` were kept because their descriptions identify genuine products.
 
 ## Train/Test Split
 
 The final two months of transactions were reserved as the test period.
 
-- Training rows: 684,357
-- Test-period rows: 118,608
-- Held-out new-product rows: 72,924
+- Training rows: 684,043
+- Test-period rows: 118,515
+- Held-out new-product rows: 72,876
 
 Only products that a customer had not previously purchased were kept as held-out test purchases.
 
@@ -55,10 +90,10 @@ Only products that a customer had not previously purchased were kept as held-out
 
 A sparse customer-product matrix was built using log-transformed purchase quantities.
 
-- Matrix shape: 5,484 customers × 4,537 products
-- Non-zero entries: 417,809
+- Matrix shape: 5,474 customers × 4,529 products
+- Non-zero entries: 417,700
 - Sparsity: 98.32%
-- Dense memory estimate: 189.83 MB
+- Dense memory estimate: 189.15 MB
 - Sparse memory: 4.80 MB
 
 The high sparsity supports using Truncated SVD as the main dimensionality-reduction method.
@@ -69,18 +104,15 @@ Truncated SVD was selected because it can operate directly on sparse data withou
 
 The following values of k were tested:
 
-- 10
-- 20
-- 50
-- 100
-- 200
+| k | Fit time | Relative reconstruction error |
+|---:|---:|---:|
+| 10 | 0.17 s | 0.7562 |
+| 20 | 0.21 s | 0.6875 |
+| 50 | 0.54 s | 0.5845 |
+| 100 | 1.24 s | 0.4961 |
+| 200 | 2.08 s | 0.3993 |
 
 A final value of **k = 100** was selected as a balance between reconstruction quality, runtime, and model size.
-
-At k = 100:
-
-- Relative reconstruction error: 0.4961
-- Fit time: approximately 1.07 seconds
 
 ## Recommendation Results
 
@@ -88,15 +120,15 @@ The recommender uses cosine similarity between product factor vectors.
 
 Evaluation was performed using Hit Rate@10 on held-out purchases.
 
-- SVD Hit Rate@10: 20.26%
-- Best-seller baseline Hit Rate@10: 17.25%
-- Nightly recommendation runtime: 1.49 seconds for 1,930 customers
+- SVD Hit Rate@10: 20.60%
+- Best-seller baseline Hit Rate@10: 17.28%
+- Nightly recommendation runtime: 1.40 seconds for 1,927 customers
 
 The baseline recommends each customer the 10 best sellers they have not already
-bought, and is measured over the same 1,930 customers the model can score, so the
+bought, and is measured over the same 1,927 customers the model can score, so the
 two figures are directly comparable.
 
-The SVD recommender performed better than simply recommending the most popular products.
+The SVD recommender outperformed the best-seller baseline by 3.3 percentage points.
 
 ## PCA vs SVD
 
@@ -104,12 +136,15 @@ Both methods were evaluated using k = 100.
 
 | Measure | PCA | Truncated SVD |
 |---|---:|---:|
-| Fit time | 0.46 s | 1.07 s |
-| Peak memory during fit | 17.96 MB | 17.74 MB |
-| Stored factors | 7.65 MB | 7.65 MB |
-| Explained variance / reconstruction error | 74.82% explained variance | 0.4961 relative error |
-| Hit Rate@10 | 20.21% | 20.26% |
-| Best-seller baseline | 17.25% | 17.25% |
+| Fit time | 0.44 s | 1.16 s |
+| Peak memory during fit | 17.92 MB | 17.70 MB |
+| Stored factors | 7.63 MB | 7.63 MB |
+| Explained variance / reconstruction error | 74.81% explained variance | 0.4961 relative error |
+| Hit Rate@10 | 20.13% | 20.60% |
+| Best-seller baseline | 17.28% | 17.28% |
+
+Fit time and peak memory are measured on the same profiled fit, so the two rows describe
+one run. Timings vary slightly between runs.
 
 Both methods produced similar recommendation accuracy. Truncated SVD was preferred because it works naturally with sparse customer-product data.
 
@@ -117,14 +152,19 @@ Both methods produced similar recommendation accuracy. Truncated SVD was preferr
 
 Customers were clustered using normalized SVD customer representations.
 
-Four customer segments were identified:
+Cluster numbers from KMeans are arbitrary and can permute between runs, so each segment is
+named from the highest-volume product in that cluster rather than from its cluster number.
 
-- Cluster 0: Home & Utility — 2,419 customers
-- Cluster 1: Novelty & Party — 1,532 customers
-- Cluster 2: Bags & Storage — 702 customers
-- Cluster 3: Decorative Homeware — 831 customers
+| Cluster | Top product | Segment name | Customers |
+|---:|---|---|---:|
+| 0 | WHITE HANGING HEART T-LIGHT HOLDER | Decorative Homeware | 831 |
+| 1 | MEDIUM CERAMIC TOP STORAGE JAR | Home & Utility | 2,375 |
+| 2 | JUMBO BAG RED RETROSPOT | Bags & Storage | 693 |
+| 3 | WORLD WAR 2 GLIDERS ASSTD DESIGNS | Novelty & Party | 1,575 |
 
 Normalization was used before clustering so the groups reflected purchase patterns rather than only purchase volume.
+
+The segment map is saved to `figures/customer_segments.png` and contains no customer IDs.
 
 ## Repository Structure
 
@@ -133,6 +173,8 @@ customers-like-you/
 ├── data/
 │   ├── raw/
 │   └── processed/
+├── figures/
+│   └── customer_segments.png
 ├── notebooks/
 │   ├── 01_data_profile.ipynb
 │   ├── 02_data_cleaning.ipynb
@@ -142,3 +184,4 @@ customers-like-you/
 ├── README.md
 ├── requirements.txt
 └── .gitignore
+```
