@@ -80,7 +80,7 @@ A final value of **k = 100** was selected as a balance between reconstruction qu
 At k = 100:
 
 - Relative reconstruction error: 0.4961
-- Fit time: approximately 0.76 seconds
+- Fit time: approximately 1.07 seconds
 
 ## Recommendation Results
 
@@ -89,8 +89,12 @@ The recommender uses cosine similarity between product factor vectors.
 Evaluation was performed using Hit Rate@10 on held-out purchases.
 
 - SVD Hit Rate@10: 20.26%
-- Best-seller baseline Hit Rate@10: 15.54%
-- Nightly recommendation runtime: 1.35 seconds for 1,930 customers
+- Best-seller baseline Hit Rate@10: 17.25%
+- Nightly recommendation runtime: 1.49 seconds for 1,930 customers
+
+The baseline recommends each customer the 10 best sellers they have not already
+bought, and is measured over the same 1,930 customers the model can score, so the
+two figures are directly comparable.
 
 The SVD recommender performed better than simply recommending the most popular products.
 
@@ -100,11 +104,12 @@ Both methods were evaluated using k = 100.
 
 | Measure | PCA | Truncated SVD |
 |---|---:|---:|
-| Fit time | 0.48 s | 0.76 s |
+| Fit time | 0.46 s | 1.07 s |
+| Peak memory during fit | 17.96 MB | 17.74 MB |
 | Stored factors | 7.65 MB | 7.65 MB |
 | Explained variance / reconstruction error | 74.82% explained variance | 0.4961 relative error |
 | Hit Rate@10 | 20.21% | 20.26% |
-| Best-seller baseline | 15.54% | 15.54% |
+| Best-seller baseline | 17.25% | 17.25% |
 
 Both methods produced similar recommendation accuracy. Truncated SVD was preferred because it works naturally with sparse customer-product data.
 
