@@ -10,12 +10,19 @@ The goal is to compress a large customer-product purchase matrix, generate produ
 
 ## Success Targets
 
-The project succeeds if it can show, with numbers, that:
+Sarah's request was translated into four measurable pass/fail targets at the start of the
+project. Each target states the threshold the project had to hit; the measured outcome is
+shown alongside so the targets can be checked rather than taken on trust.
 
-1. The compressed representation is much smaller than the dense customer-product matrix.
-2. The nightly recommendation job is fast enough to run every night.
-3. The recommender beats a best-seller baseline on purchases the model never saw.
-4. The customer map produces groups the marketing team can name and campaign against.
+| # | Success target (threshold agreed up front) | Measured result | Met |
+|---|---|---|:--:|
+| 1 | Stored factors must be **under 10%** of the dense matrix (189.15 MB) | **7.63 MB** — 95.97% smaller | Yes |
+| 2 | Nightly scoring of all eligible customers must finish in **under 60 seconds** | **1.56 s** for 1,927 customers | Yes |
+| 3 | Hit Rate@10 on held-out purchases must **beat the best-seller baseline** | **20.60%** vs **17.28%** — +3.3 pp | Yes |
+| 4 | The customer map must yield **3-6 clusters, each nameable from its top products** | **4 named segments** | Yes |
+
+Targets 1 and 2 answer "how big and how fast"; target 3 is the test of whether the model is
+worth building at all; target 4 is what the marketing team asked for.
 
 ## Dataset
 
